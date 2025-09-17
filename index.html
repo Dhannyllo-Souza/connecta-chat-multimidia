@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecta - Chat Multimídia</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://kit.fontawesome.com/c4241279dd.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Barra de Servidores -->
+        <nav class="servers-bar">
+            <div class="server-icon logo">
+                <img src="logo.png" alt="Logo">
+            </div>
+            <div class="separator"></div>
+            <div class="server-icon active">
+                <img src="server-icon-1.png" alt="Servidor 1">
+            </div>
+            <div class="server-icon">
+                <img src="server-icon-2.png" alt="Servidor 2">
+            </div>
+            <div class="server-icon add-server">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+        </nav>
+
+        <!-- Barra de Canais -->
+        <aside class="channels-bar">
+            <header class="channel-header">
+                <h1 id="server-name">Comunidade de Jogos</h1>
+                <i class="fa-solid fa-chevron-down"></i>
+            </header>
+            <div class="channel-list" id="channel-list-container">
+                <!-- Channel content will be dynamically inserted here -->
+            </div>
+            <footer class="user-info">
+                <img src="user-avatar-1.png" alt="Avatar do usuário" class="avatar">
+                <div class="user-details">
+                    <span class="username">Usuário</span>
+                    <span class="user-status">Online</span>
+                </div>
+                <div class="user-actions">
+                    <i class="fa-solid fa-microphone"></i>
+                    <i class="fa-solid fa-headphones"></i>
+                    <i class="fa-solid fa-gear"></i>
+                </div>
+            </footer>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content" id="main-view-wrapper">
+            <header class="chat-header">
+                <div class="channel-name">
+                    <button id="toggle-channels-btn" class="mobile-only-btn"><i class="fa-solid fa-bars"></i></button>
+                    <i class="fa-solid fa-hashtag"></i>
+                    <h2>geral</h2>
+                </div>
+                <div class="chat-actions">
+                    <i class="fa-solid fa-video"></i>
+                    <i class="fa-solid fa-file-arrow-down" id="export-chat-btn" title="Exportar Chat"></i>
+                    <i class="fa-solid fa-users" id="toggle-user-list"></i>
+                    <input type="search" placeholder="Buscar">
+                </div>
+            </header>
+            
+            <div class="chat-layout" id="chat-layout">
+                <div class="messages-container">
+                    <!-- Mensagens de Exemplo -->
+                    <div class="message">
+                        <img src="user-avatar-2.png" alt="Avatar" class="avatar">
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="username">Amigo1</span>
+                                <span class="timestamp">Hoje às 14:30</span>
+                            </div>
+                            <p>E aí, pessoal! Bem-vindos ao Connecta. Este é o começo de algo incrível.</p>
+                        </div>
+                    </div>
+                     <div class="message">
+                        <img src="user-avatar-3.png" alt="Avatar" class="avatar">
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="username">Comunidade</span>
+                                <span class="timestamp">Hoje às 14:31</span>
+                            </div>
+                            <p>Que demais! A interface é muito bonita.</p>
+                        </div>
+                    </div>
+                     <div class="message">
+                        <img src="user-avatar-1.png" alt="Avatar" class="avatar">
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="username">Usuário</span>
+                                <span class="timestamp">Hoje às 14:32</span>
+                            </div>
+                            <p>Concordo! Mal posso esperar para ver as chamadas de vídeo funcionando.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <aside class="user-list">
+                    <h3>Online - 4</h3>
+                    <ul>
+                        <li>
+                            <img src="user-avatar-1.png" alt="Avatar" class="avatar">
+                            <span>Usuário</span>
+                        </li>
+                        <li>
+                            <img src="user-avatar-2.png" alt="Avatar" class="avatar">
+                            <span>Amigo1</span>
+                        </li>
+                        <li>
+                            <img src="user-avatar-3.png" alt="Avatar" class="avatar">
+                            <span>Comunidade</span>
+                        </li>
+                        <li>
+                            <img src="ai-avatar.png" alt="Avatar" class="avatar">
+                            <span>AI Assistant</span> <span class="bot-tag-list">BOT</span>
+                        </li>
+                    </ul>
+                     <h3>Offline - 1</h3>
+                    <ul>
+                        <li class="offline">
+                            <img src="user-avatar-4.png" alt="Avatar" class="avatar">
+                            <span>Ausente</span>
+                        </li>
+                    </ul>
+                </aside>
+            </div>
+
+            <form class="chat-input-form" id="chat-form">
+                <div class="input-wrapper">
+                    <button type="button" class="attach-btn"><i class="fa-solid fa-circle-plus"></i></button>
+                    <input type="text" id="message-input" placeholder="Conversar em #geral">
+                    <button type="button" class="gift-btn"><i class="fa-solid fa-gift"></i></button>
+                    <button type="button" class="gif-btn"><i class="fa-solid fa-note-sticky"></i></button>
+                    <button type="button" class="emoji-btn"><i class="fa-solid fa-face-smile"></i></button>
+                </div>
+            </form>
+        </main>
+
+        <div id="image-modal" class="modal-overlay">
+            <span class="close-modal">&times;</span>
+            <img class="modal-content" id="modal-image">
+        </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="script.js" type="module"></script>
+</body>
+</html>
