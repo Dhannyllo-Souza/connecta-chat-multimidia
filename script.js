@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
     const appContainer = document.getElementById('app-container');
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
-    const messagesContainer = document.querySelector('.messages-container');
+    const messagesContainer = document.getElementById('messages-container');
     const serverIcons = document.querySelectorAll('.servers-bar .server-icon:not(.logo):not(.add-server)');
     const serverNameEl = document.getElementById('server-name');
     const channelListContainer = document.getElementById('channel-list-container');
@@ -14,10 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalImage = document.getElementById('modal-image');
     const closeModalBtn = document.querySelector('.close-modal');
     const exportChatBtn = document.getElementById('export-chat-btn');
+    const toggleChannelsBtn = document.getElementById('toggle-channels-btn');
 
+    // --- App State ---
     let currentServerKey = 'server-icon-1';
     let currentChannelName = 'geral';
-
+    const messageHistory = JSON.parse(localStorage.getItem('connectaChatHistory')) || {};
+    
     // --- Audio Context for Sound Effects ---
     let audioContext;
     let thinkingBuffer;
@@ -41,35 +45,32 @@ document.addEventListener('DOMContentLoaded', () => {
         source.start(0);
     }
     
-    document.body.addEventListener('click', () => {
-        if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
-    }, { once: true });
+    // --- Utility Functions ---
+    function escapeHTML(str) {
+        const p = document.createElement("p");
+        p.appendChild(document.createTextNode(str));
+        return p.innerHTML;
+    }
 
-    // --- Mobile Navigation ---
-    const toggleChannelsBtn = document.getElementById('toggle-channels-btn');
-    
-    toggleChannelsBtn.addEventListener('click', () => {
-        appContainer.classList.toggle('channels-visible');
-    });
+    function showToast(message, type = '') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = '';
+        if (type === 'success') icon = '<i class="fa-solid fa-check-circle"></i>';
+        if (type === 'error') icon = '<i class="fa-solid fa-exclamation-circle"></i>';
 
-    mainViewWrapper.addEventListener('click', (e) => {
-        if (window.innerWidth <= 768 && appContainer.classList.contains('channels-visible')) {
-            // Check if the click is on the main content area itself, not the overlaid channel list
-            if (!e.target.closest('.channels-bar')) {
-                 appContainer.classList.remove('channels-visible');
-            }
-        }
-    });
-
-    // --- Message Persistence ---
-    const messageHistory = JSON.parse(localStorage.getItem('connectaChatHistory')) || {};
+        toast.innerHTML = `${icon} ${message}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
 
     function getChannelKey() {
         return `${currentServerKey}/${currentChannelName}`;
     }
 
+    // --- Message Persistence ---
     function saveMessages() {
         localStorage.setItem('connectaChatHistory', JSON.stringify(messageHistory));
     }
@@ -85,28 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
         messageHistory[channelKey].push(messageData);
         saveMessages();
         return messageData;
-    }
-
-    function renderMessagesForChannel() {
-        messagesContainer.innerHTML = '';
-        const channelKey = getChannelKey();
-        const messages = messageHistory[channelKey] || [];
-
-        if (messages.length === 0) {
-            // No history, show welcome message
-            const welcomeMessageData = { 
-                content: { text: `Bem-vindo ao canal #${currentChannelName}! Este é o início deste canal.\n\nApresento a você o nosso **AI Assistant**. Ele foi aprimorado para ser mais estável e preciso. Experimente mencioná-lo digitando \`@AI ajuda\` para ver seus novos recursos.` },
-                user: users.connectaBot
-            };
-            const welcomeMessage = createMessageElement(welcomeMessageData);
-            messagesContainer.appendChild(welcomeMessage);
-        } else {
-            messages.forEach(msg => {
-                const messageElement = createMessageElement(msg);
-                messagesContainer.appendChild(messageElement);
-            });
-        }
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
     // --- Mock Data ---
@@ -159,131 +138,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- Message Sending Logic ---
-    chatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        sendMessage();
-    });
-
-    messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    function sendMessage() {
-        const messageText = messageInput.value.trim();
-        if (messageText === '') return;
-
-        const messageData = addMessageToHistory({ text: messageText }, users.currentUser);
-        const messageElement = createMessageElement(messageData);
-        messagesContainer.appendChild(messageElement);
-
-        messageInput.value = '';
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        if (messageText.toLowerCase().startsWith('@ai')) {
-            showTypingIndicator();
-            setTimeout(() => getAIResponse(messageText), 1500 + Math.random() * 1000);
-        }
-    }
-    
-    function getAIResponse(prompt) {
-        hideTypingIndicator();
-        const responseContent = generateAIResponse(prompt);
-        const responseData = addMessageToHistory(responseContent, users.aiAssistant);
-        const messageElement = createMessageElement(responseData);
-        messagesContainer.appendChild(messageElement);
-        // Highlight code if present
-        const codeBlock = messageElement.querySelector('pre code');
-        if (codeBlock) {
-            hljs.highlightElement(codeBlock);
-        }
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    function generateAIResponse(prompt) {
-        const lowerCasePrompt = prompt.toLowerCase().replace('@ai', '').trim();
-        
-        // Image generation request
-        if (lowerCasePrompt.match(/^(crie|gere|desenhe|faça) uma imagem/)) {
-            let subject = lowerCasePrompt.replace(/^(crie|gere|desenhe|faça) uma imagem de\s*/, '');
-            if (subject === lowerCasePrompt) subject = "um gato fofo programando";
-            return {
-                text: `Com certeza! Aqui está uma imagem que gerei para você com base na descrição: "${subject}".`,
-                image: 'ai-generated-image.png'
-            };
-        }
-        
-        // Code generation request
-        if (lowerCasePrompt.match(/código|função|script/)) {
-             return {
-                text: 'Claro! Aqui está um exemplo de código em JavaScript. Note que adicionei realce de sintaxe para melhor legibilidade:',
-                code: `// Simple function to greet a user\nfunction greet(name) {\n  return \`Hello, \${name}! Welcome to Connecta.\`;\n}\n\nconst user = "Usuário";\nconsole.log(greet(user));`
-            };
-        }
-
-        // Translation request
-        if (lowerCasePrompt.match(/^(traduza|traduzir)/)) {
-            const textToTranslate = prompt.replace(/^(traduza|traduzir)\s*/i, '').replace('@ai', '').trim();
-             return {
-                text: `A tradução simulada para "${textToTranslate}" é: "This is a simulated translation." Eu sou capaz de entender e processar solicitações em vários idiomas.`
-            };
-        }
-
-        // Summarization request
-        if (lowerCasePrompt.match(/^(resuma|resumir)/)) {
-             return {
-                text: 'Entendido! Aqui está um resumo simulado do texto fornecido: "A inteligência artificial está transformando a maneira como interagimos com a tecnologia, oferecendo novas possibilidades e otimizando processos." Minhas capacidades de resumo podem ajudar a extrair as ideias principais de textos longos.'
-            };
-        }
-
-        // General knowledge
-        if (lowerCasePrompt.match(/^o que é|quem é/)) {
-             return {
-                text: 'Essa é uma ótima pergunta! Com base em meu vasto conhecimento, posso dizer que a resposta é complexa e fascinante. No entanto, para uma resposta precisa, eu precisaria de um pouco mais de contexto. Em geral, posso fornecer informações detalhadas sobre uma ampla variedade de tópicos.'
-             };
-        }
-
-        // Conversational responses
-        if (lowerCasePrompt.match(/^(olá|oi|e aí)/)) {
-            return { text: 'Olá! Sou um assistente de IA avançado. Estou aqui para ajudar com código, imagens, traduções, resumos e muito mais. O que você precisa?' };
-        }
-        if (lowerCasePrompt.includes('ajuda')) {
-            return { text: 'Eu posso ajudar de várias maneiras! Experimente me pedir para:\n• `criar uma imagem de um dragão azul`\n• `escrever um código em python`\n• `traduzir "bom dia"`\n• `resumir um texto longo`\n• `O que é a teoria da relatividade?`\nEstou sempre aprendendo coisas novas!' };
-        }
-        if (lowerCasePrompt.includes('piada')) {
-            return { text: 'Qual é o prato preferido do programador? Arroz com `hash`!' };
-        }
-        if (lowerCasePrompt.includes('sentido da vida')) {
-             return { text: 'A resposta para a grande questão da vida, do universo e tudo mais é... 42! Pelo menos, é o que dizem os supercomputadores. 😉' };
-        }
-        if (lowerCasePrompt.includes('obrigado') || lowerCasePrompt.includes('valeu')) {
-            return { text: 'De nada! Fico feliz em ajudar. Se precisar de mais alguma coisa, é só me chamar.' };
-        }
-        if (lowerCasePrompt.includes('como você funciona')) {
-             return { text: 'Eu opero com base em modelos de linguagem avançados. Analiso sua solicitação para entender a intenção e, em seguida, gero a resposta mais precisa e relevante possível, seja texto, código ou uma imagem.' };
-        }
-
-        return { text: 'Desculpe, não entendi completamente. Sou um modelo de IA sofisticado, mas ainda estou em desenvolvimento. Você pode pedir "ajuda" para ver algumas das coisas que posso fazer.' };
-    }
-
+    // --- Message Rendering & UI ---
     function createMessageElement({ content, user, timestamp }) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message');
 
         const date = new Date(timestamp);
-        const timeString = date.toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
+        const timeString = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const botTag = user.isBot ? `<span class="bot-tag">BOT</span>` : '';
 
         let messageBody = '';
         if (content.text) {
-            messageBody += `<p>${escapeHTML(content.text).replace(/\n/g, '<br>')}</p>`;
+            let formattedText = escapeHTML(content.text)
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')     // Italics
+                .replace(/`(.*?)`/g, '<code>$1</code>')      // Inline code
+                .replace(/\n/g, '<br>');
+            messageBody += `<p>${formattedText}</p>`;
         }
         if (content.code) {
             messageBody += `<pre><code class="language-javascript">${escapeHTML(content.code)}</code></pre>`;
@@ -306,16 +177,38 @@ document.addEventListener('DOMContentLoaded', () => {
         return messageDiv;
     }
 
-    function escapeHTML(str) {
-        const p = document.createElement("p");
-        p.appendChild(document.createTextNode(str));
-        return p.innerHTML;
-    }
+    function renderMessagesForChannel() {
+        messagesContainer.innerHTML = '';
+        messagesContainer.classList.add('loading');
 
+        setTimeout(() => { // Simulate loading
+            const channelKey = getChannelKey();
+            const messages = messageHistory[channelKey] || [];
+
+            if (messages.length === 0) {
+                const welcomeMessageData = { 
+                    content: { text: `Bem-vindo ao canal #${currentChannelName}! Este é o início deste canal.\n\nApresento a você o nosso **AI Assistant**. Ele foi aprimorado para ser mais estável e preciso. Experimente mencioná-lo digitando \`@AI ajuda\` para ver seus novos recursos.` },
+                    user: users.connectaBot,
+                    timestamp: new Date().toISOString()
+                };
+                const welcomeMessage = createMessageElement(welcomeMessageData);
+                messagesContainer.appendChild(welcomeMessage);
+            } else {
+                messages.forEach(msg => {
+                    const messageElement = createMessageElement(msg);
+                    messagesContainer.appendChild(messageElement);
+                    // Highlight code blocks
+                    messageElement.querySelectorAll('pre code').forEach(hljs.highlightElement);
+                });
+            }
+            messagesContainer.classList.remove('loading');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 250);
+    }
+    
     function showTypingIndicator() {
-        if (audioContext && audioContext.state === 'running') {
-            playSound(thinkingBuffer);
-        }
+        if (audioContext && audioContext.state === 'running') playSound(thinkingBuffer);
+        
         const typingIndicator = document.createElement('div');
         typingIndicator.id = 'typing-indicator';
         typingIndicator.classList.add('message');
@@ -336,13 +229,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hideTypingIndicator() {
         const typingIndicator = document.getElementById('typing-indicator');
-        if (typingIndicator) {
-            typingIndicator.remove();
-        }
+        if (typingIndicator) typingIndicator.remove();
+    }
+    
+    // --- AI Logic ---
+    function getAIResponse(prompt) {
+        hideTypingIndicator();
+        const responseContent = generateAIResponse(prompt);
+        const responseData = addMessageToHistory(responseContent, users.aiAssistant);
+        const messageElement = createMessageElement(responseData);
+        messagesContainer.appendChild(messageElement);
+        
+        const codeBlock = messageElement.querySelector('pre code');
+        if (codeBlock) hljs.highlightElement(codeBlock);
+        
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // --- Channel and Server Switching Logic ---
+    function generateAIResponse(prompt) {
+        const lowerCasePrompt = prompt.toLowerCase().replace('@ai', '').trim();
+        
+        const commands = [
+            {
+                match: /^(crie|gere|desenhe|faça) uma imagem/,
+                handler: (p) => {
+                    let subject = p.replace(/^(crie|gere|desenhe|faça) uma imagem de\s*/, '').replace(/\s/g, ',');
+                    if (!subject || subject.length < 3) subject = "cute,cat,programming";
+                    return {
+                        text: `Com certeza! Gerei uma imagem com base na sua descrição: *"${subject.replace(/,/g, ' ')}"*.`,
+                        image: `https://source.unsplash.com/random/400x300?${subject}`
+                    };
+                }
+            },
+            {
+                match: /código|função|script/,
+                handler: () => ({
+                    text: 'Claro! Aqui está um exemplo de código em JavaScript para calcular o fatorial de um número:',
+                    code: `function factorial(n) {\n  if (n === 0 || n === 1) {\n    return 1;\n  }\n  return n * factorial(n - 1);\n}\n\nconsole.log(factorial(5)); // Output: 120`
+                })
+            },
+            {
+                match: /^(traduza|traduzir)/,
+                handler: (p) => {
+                    const textToTranslate = prompt.replace(/^(traduza|traduzir)\s*/i, '').replace('@ai', '').trim();
+                    return { text: `A tradução simulada para *"${textToTranslate}"* é: **"This is a simulated translation."** Minhas capacidades de tradução são avançadas e suportam múltiplos idiomas.` };
+                }
+            },
+            {
+                match: /^(resuma|resumir)/,
+                handler: () => ({ text: 'Entendido! Aqui está um resumo simulado: **"A inteligência artificial está transformando a forma como interagimos com a tecnologia, oferecendo novas possibilidades e otimizando processos."** Minhas capacidades de resumo podem extrair as ideias principais de textos longos.' })
+            },
+             {
+                match: /^(pesquise por|procure por)/,
+                handler: (p) => {
+                     const query = p.replace(/^(pesquise por|procure por)\s*/, '');
+                    return { text: `Realizei uma busca na web por *"${query}"*.\n\nResultados simulados indicam que é um tópico amplamente discutido, com foco em **[Tópico Principal 1]** e **[Tópico Principal 2]**. A fonte mais relevante parece ser a [Fonte Confiável Fictícia].` };
+                }
+            },
+            {
+                match: /ajuda/,
+                handler: () => ({ text: 'Eu posso ajudar de várias maneiras! Experimente me pedir para:\n• `criar uma imagem de um dragão azul`\n• `escrever um código em python`\n• `traduzir "bom dia"`\n• `pesquise por computação quântica`\nEstou sempre aprendendo coisas novas!' })
+            },
+            {
+                match: /^(olá|oi|e aí)/,
+                handler: () => ({ text: 'Olá! Sou um assistente de IA avançado. Estou aqui para ajudar com código, imagens, traduções, resumos e muito mais. Como posso te ajudar hoje?' })
+            }
+        ];
 
+        for (const command of commands) {
+            if (lowerCasePrompt.match(command.match)) {
+                return command.handler(lowerCasePrompt);
+            }
+        }
+        
+        return { text: 'Desculpe, não entendi completamente. Sou um modelo de IA sofisticado, mas ainda estou em desenvolvimento. Você pode digitar `@ai ajuda` para ver algumas das coisas que posso fazer.' };
+    }
+    
+    // --- Message Sending Logic ---
+    function sendMessage() {
+        const messageText = messageInput.value.trim();
+        if (messageText === '') return;
+
+        const messageData = addMessageToHistory({ text: messageText }, users.currentUser);
+        const messageElement = createMessageElement(messageData);
+        messagesContainer.appendChild(messageElement);
+
+        messageInput.value = '';
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        if (messageText.toLowerCase().startsWith('@ai')) {
+            showTypingIndicator();
+            setTimeout(() => getAIResponse(messageText), 1500 + Math.random() * 1000);
+        }
+    }
+    
+    // --- Channel and Server Switching Logic ---
     function renderChannels(serverKey) {
         const server = serverData[serverKey];
         if (!server) return;
@@ -383,16 +364,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function switchChannel(clickedElement, channelName, channelIcon) {
+        if (currentChannelName === channelName) return; // Don't reload if it's the same channel
         document.querySelectorAll('.channel-list .channel').forEach(c => c.classList.remove('active'));
         clickedElement.classList.add('active');
         currentChannelName = channelName;
         updateChatHeader(channelName, channelIcon);
         renderMessagesForChannel();
 
-        // --- Hide channel list on mobile after selection ---
-        if (window.innerWidth <= 768) {
-            appContainer.classList.remove('channels-visible');
-        }
+        if (window.innerWidth <= 768) appContainer.classList.remove('channels-visible');
     }
     
     function updateChatHeader(channelName, iconClass) {
@@ -400,33 +379,55 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.chat-header .channel-name i').className = `fa-solid ${iconClass}`;
         messageInput.placeholder = `Conversar em #${channelName}`;
     }
-
-    function showWelcomeMessage(channelName) {
-        messagesContainer.innerHTML = ''; // Clear previous messages
-        const welcomeMessageData = {
-            content: { text: `Bem-vindo ao canal #${channelName}! Este é o início deste canal.\n\nApresento a você o nosso **AI Assistant**. Ele foi aprimorado para ser mais estável e preciso. Experimente mencioná-lo digitando \`@AI ajuda\` para ver seus novos recursos.` },
-            user: users.connectaBot,
-            timestamp: new Date().toISOString()
-        }
-        const welcomeMessage = createMessageElement(welcomeMessageData);
-        messagesContainer.appendChild(welcomeMessage);
-    }
     
-    serverIcons.forEach(icon => {
-        icon.addEventListener('click', () => {
-            serverIcons.forEach(i => i.classList.remove('active'));
-            icon.classList.add('active');
-            currentServerKey = icon.querySelector('img').alt.includes('1') ? 'server-icon-1' : 'server-icon-2';
+    function switchServer(icon) {
+        serverIcons.forEach(i => i.classList.remove('active'));
+        icon.classList.add('active');
+        const newServerKey = icon.querySelector('img').alt.includes('1') ? 'server-icon-1' : 'server-icon-2';
+        if (currentServerKey !== newServerKey) {
+            currentServerKey = newServerKey;
             renderChannels(currentServerKey);
-        });
+        }
+    }
+
+    // --- Event Listeners ---
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        sendMessage();
     });
 
-    // --- Export Chat Logic ---
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    document.body.addEventListener('click', () => {
+        if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+    }, { once: true });
+    
+    toggleChannelsBtn.addEventListener('click', () => {
+        appContainer.classList.toggle('channels-visible');
+    });
+
+    mainViewWrapper.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && appContainer.classList.contains('channels-visible')) {
+            if (!e.target.closest('.channels-bar')) {
+                 appContainer.classList.remove('channels-visible');
+            }
+        }
+    });
+
+    serverIcons.forEach(icon => {
+        icon.addEventListener('click', () => switchServer(icon));
+    });
+
     exportChatBtn.addEventListener('click', () => {
         const channelKey = getChannelKey();
         const history = messageHistory[channelKey];
         if (!history || history.length === 0) {
-            alert('Não há mensagens para exportar neste canal.');
+            showToast('Não há mensagens para exportar.', 'error');
             return;
         }
 
@@ -442,9 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        showToast('Histórico do chat exportado com sucesso!', 'success');
     });
 
-    // --- Image Modal Logic ---
     messagesContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('message-image')) {
             imageModal.style.display = 'flex';
@@ -455,32 +456,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeModal() {
         imageModal.style.display = 'none';
     }
-
     closeModalBtn.addEventListener('click', closeModal);
     imageModal.addEventListener('click', (e) => {
-        if (e.target === imageModal) {
-            closeModal();
-        }
+        if (e.target === imageModal) closeModal();
     });
 
-    // --- UI Toggles ---
     toggleUserListBtn.addEventListener('click', () => {
-        const isHidden = chatLayout.classList.toggle('user-list-hidden');
-        
-        if (window.innerWidth > 1024) {
-            // Desktop behavior
-            toggleUserListBtn.classList.toggle('active');
-        } else {
-             // Tablet/Mobile behavior (overlay)
-            if (isHidden) {
-                toggleUserListBtn.classList.remove('active');
-            } else {
-                toggleUserListBtn.classList.add('active');
-            }
-        }
+        chatLayout.classList.toggle('user-list-hidden');
+        toggleUserListBtn.classList.toggle('active');
     });
 
-    // Hide user list by default on smaller screens
+    // --- Responsive Adjustments ---
     function checkAndSetUserList() {
         if (window.innerWidth <= 1024) {
             chatLayout.classList.add('user-list-hidden');
@@ -494,7 +480,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', checkAndSetUserList);
 
     // --- Initial Load ---
-    renderChannels('server-icon-1'); // Load default server
-    checkAndSetUserList(); // Set initial state of user list
-    setupAudio(); // Prepare sound effects
+    function init() {
+        renderChannels('server-icon-1');
+        checkAndSetUserList();
+        setupAudio();
+    }
+
+    init();
 });

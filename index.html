@@ -70,7 +70,7 @@
             </header>
             
             <div class="chat-layout" id="chat-layout">
-                <div class="messages-container">
+                <div class="messages-container" id="messages-container">
                     <!-- Mensagens de Exemplo -->
                     <div class="message">
                         <img src="user-avatar-2.png" alt="Avatar" class="avatar">
@@ -121,7 +121,7 @@
                         </li>
                         <li>
                             <img src="ai-avatar.png" alt="Avatar" class="avatar">
-                            <span>AI Assistant</span> <span class="bot-tag-list">BOT</span>
+                            <span>AI Assistant</span> <span class="bot-tag">BOT</span>
                         </li>
                     </ul>
                      <h3>Offline - 1</h3>
@@ -149,6 +149,8 @@
             <span class="close-modal">&times;</span>
             <img class="modal-content" id="modal-image">
         </div>
+
+        <div id="toast-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="script.js" type="module"></script>
